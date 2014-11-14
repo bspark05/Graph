@@ -37,45 +37,48 @@ public class Neo4jHello {
 
         System.out.println("neo4j server status : " + status);
 
-        /**
-         * create a node
-        */
-
-        String firstNodeLocation = neo4jHello.createNode();
-
-        String secondNodeLocation = neo4jHello.createNode();
-
-        /**
-         * add properties to node
-         */
-
-        //neo4jHello.addProperty("http://localhost:7474/db/data/node/1", "name" , "Niraj");
-        //neo4jHello.addProperty("http://localhost:7474/db/data/node/2", "name" , "Manisha");
-
-        neo4jHello.addProperty(firstNodeLocation, "name" , "Niraj");
-        neo4jHello.addProperty(secondNodeLocation, "name" , "Manisha");
-
-
-        /**
-         *  add relationship between nodes
-         */
-        String relationAttributes = "{ \"married\" : \"yes\",\"since\" : \"2005\" }";
-        String relationShipURI = neo4jHello.addRelationship("http://localhost:7474/db/data/node/0",
-                                                            "http://localhost:7474/db/data/node/1",
-                                                            "friend",
-                                                            relationAttributes);
-
-        /**
-         * add properties to relationship
-         */
-
-         neo4jHello.addPropertyToRelation(relationShipURI, "weight", "5");
-
-        /**
-         * finally traverse all the nodes starting from node 1
-         */
-
-        neo4jHello.searchDatabase(firstNodeLocation, "friend");
+//        /**
+//         * create a node
+//        */
+//
+//        String firstNodeLocation = neo4jHello.createNode();
+//
+//        String secondNodeLocation = neo4jHello.createNode();
+//
+//        /**
+//         * add properties to node
+//         */
+//
+//        //neo4jHello.addProperty("http://localhost:7474/db/data/node/1", "name" , "Niraj");
+//        //neo4jHello.addProperty("http://localhost:7474/db/data/node/2", "name" , "Manisha");
+//
+//        neo4jHello.addProperty(firstNodeLocation, "name" , "Niraj");
+//        neo4jHello.addProperty(secondNodeLocation, "name" , "Manisha");
+//
+//
+//        /**
+//         *  add relationship between nodes
+//         */
+//        String relationAttributes = "{ \"married\" : \"yes\",\"since\" : \"2005\" }";
+//        String relationShipURI = neo4jHello.addRelationship("http://localhost:7474/db/data/node/0",
+//                                                            "http://localhost:7474/db/data/node/1",
+//                                                            "friend",
+//                                                            relationAttributes);
+//
+//        /**
+//         * add properties to relationship
+//         */
+//
+//         neo4jHello.addPropertyToRelation(relationShipURI, "weight", "5");
+//
+//        /**
+//         * finally traverse all the nodes starting from node 1
+//         */
+//
+//        neo4jHello.searchDatabase(firstNodeLocation, "friend");
+        
+        String location = neo4jHello.createUniqueNode("id", "0000001");
+        
 
     }
 
@@ -128,12 +131,12 @@ public class Neo4jHello {
                                                                         "application/json",
                                                                         "UTF-8");
             mPost.setRequestEntity(requestEntity);
-            int satus = client.executeMethod(mPost);
+            int status = client.executeMethod(mPost);
             output = mPost.getResponseBodyAsString( );
             Header locationHeader =  mPost.getResponseHeader("location");
             location = locationHeader.getValue();
             mPost.releaseConnection( );
-            System.out.println("satus : " + satus);
+            System.out.println("status : " + status);
             System.out.println("location : " + location);
             System.out.println("output : " + output);
         }catch(Exception e){
@@ -177,11 +180,11 @@ public class Neo4jHello {
                                                                         "application/json",
                                                                         "UTF-8");
             mPut.setRequestEntity(requestEntity);
-            int satus = client.executeMethod(mPut);
+            int status = client.executeMethod(mPut);
             output = mPut.getResponseBodyAsString( );
 
             mPut.releaseConnection( );
-            System.out.println("satus : " + satus);
+            System.out.println("status : " + status);
             System.out.println("output : " + output);
         }catch(Exception e){
              System.out.println("Exception in creating node in neo4j : " + e);
@@ -397,5 +400,74 @@ public class Neo4jHello {
 
         return output;
     }
+    
+    public String createUniqueNode(String key, String value){
+    	String output = null;
+        String location = null;
+        try{
+            String nodePointUrl = this.SERVER_ROOT_URI + "/db/data/node?uniqueness=get_or_create";
+            HttpClient client = new HttpClient();
+            PostMethod mPost = new PostMethod(nodePointUrl);
+
+
+            /**
+             * set headers
+             */
+            Header mtHeader = new Header();
+            mtHeader.setName("content-type");
+            mtHeader.setValue("application/json");
+            mtHeader.setName("accept");
+            mtHeader.setValue("application/json");
+            mPost.addRequestHeader(mtHeader);
+
+            /**
+             * set json payload
+             */
+            StringRequestEntity requestEntity = new StringRequestEntity("{}",
+                                                                        "application/json",
+                                                                        "UTF-8");
+            mPost.setRequestEntity(requestEntity);
+            int status = client.executeMethod(mPost);
+            output = mPost.getResponseBodyAsString( );
+            Header locationHeader =  mPost.getResponseHeader("location");
+            location = locationHeader.getValue();
+            mPost.releaseConnection( );
+            System.out.println("status : " + status);
+            System.out.println("location : " + location);
+            System.out.println("output : " + output);
+        }catch(Exception e){
+             System.out.println("Exception in creating node in neo4j : " + e);
+        }
+
+        return location;
+        
+    }
+    
+	private String generateJsonUniqueNode(String endNodeURL,
+	            String relationshipType,
+	            String ... jsonAttributes) {
+	StringBuilder sb = new StringBuilder();
+	sb.append("{ \"to\" : \"");
+	sb.append(endNodeURL);
+	sb.append("\", ");
+	
+	sb.append("\"type\" : \"");
+	sb.append(relationshipType);
+	if(jsonAttributes == null || jsonAttributes.length < 1) {
+	sb.append("\"");
+	} else {
+	sb.append("\", \"data\" : ");
+	for(int i = 0; i < jsonAttributes.length; i++) {
+	sb.append(jsonAttributes[i]);
+	if(i < jsonAttributes.length -1) { // Miss off the final comma
+	sb.append(", ");
+	}
+	}
+	}
+	
+	sb.append(" }");
+	return sb.toString();
+	}
+	    
 
 }
